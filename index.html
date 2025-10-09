@@ -226,8 +226,8 @@
 
         <script>
         const { jsPDF } = window.jspdf;
-        const APIKEY = "AIzaSyD9xRkAan0WhW8GTegveSaU5gaInCO4Yy0";
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${APIKEY}`;
+        const apiKey = "AIzaSyD9xRkAan0WhW8GTegveSaU5gaInCO4Yy0";
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
 
         // --- Helper function to create chart HTML ---
@@ -378,7 +378,9 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`API error: ${response.statusText}`);
+                    const errorBody = await response.json().catch(() => ({ error: { message: 'Could not parse error response.' } }));
+                    const errorMessage = errorBody.error?.message || response.statusText;
+                    throw new Error(`API error (${response.status}): ${errorMessage}`);
                 }
 
                 const data = await response.json();
@@ -390,7 +392,7 @@
 
             } catch (error) {
                 console.error("AI Generation Error:", error);
-                alert("Failed to generate AI data. Please check the console for details or try again.");
+                alert(`Failed to generate AI data. Please check the console for details.\n${error.message}`);
                 marketDataCache = null;
             } finally {
                 aiLoader.classList.add('hidden');
