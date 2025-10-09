@@ -123,6 +123,11 @@
             color: #6b7280;
             margin-top: 4px;
         }
+        /* Drag and Drop style */
+        .drag-over {
+             border-color: #4f46e5;
+             background-color: #eef2ff;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 text-slate-800 flex items-center justify-center min-h-screen">
@@ -138,6 +143,9 @@
         <div class="flashcard-container w-full h-[30rem] sm:h-[28rem]">
             <div class="flashcard">
                 <div id="flashcard-front" class="flashcard-face">
+                    <div class="absolute top-4 right-4 hidden" id="selection-checkbox-container">
+                        <input type="checkbox" id="selection-checkbox" class="h-6 w-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    </div>
                     <h2 class="text-2xl sm:text-3xl font-semibold text-center"></h2>
                 </div>
                 <div class="flashcard-face flashcard-back">
@@ -156,7 +164,7 @@
         </div>
 
         <!-- Action Controls -->
-        <div class="flex items-center justify-center space-x-2 sm:space-x-4 mt-6">
+        <div id="action-controls" class="flex items-center justify-center space-x-2 sm:space-x-4 mt-6">
             <button id="shuffleBtn" class="p-3 bg-white/80 border border-slate-200 rounded-full shadow-sm text-slate-700 font-semibold hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200" title="Shuffle Cards">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
             </button>
@@ -173,6 +181,20 @@
             </button>
         </div>
 
+        <!-- Selection Action Controls -->
+        <div id="selection-controls" class="hidden items-center justify-center space-x-2 sm:space-x-4 mt-6">
+            <button id="selectAllBtn" class="px-4 py-2 bg-white/80 border border-slate-300 rounded-full text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Select All</button>
+            <button id="editCardBtn" class="px-4 py-2 bg-blue-500 text-white rounded-full text-sm font-semibold hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
+                Edit
+            </button>
+            <button id="deleteCardsBtn" class="px-4 py-2 bg-red-500 text-white rounded-full text-sm font-semibold hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" disabled>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
+                Delete
+            </button>
+        </div>
+
+
         <!-- Navigation Controls -->
         <div class="flex items-center justify-center space-x-4 mt-4">
             <button id="prevBtn" class="p-4 bg-white/80 border border-slate-200 rounded-full shadow-sm text-slate-700 font-semibold hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" title="Previous">
@@ -187,19 +209,48 @@
     
     <!-- Footer and Action Buttons -->
     <footer class="fixed bottom-4 left-4 right-4 z-10 flex justify-between">
-         <button id="addCardBtn" class="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full text-sm text-slate-600 hover:text-slate-900 transition shadow-md flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-             Add Card
-         </button>
+        <div class="flex items-center gap-2">
+             <button id="addCardBtn" class="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full text-sm text-slate-600 hover:text-slate-900 transition shadow-md flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                 Add Card
+             </button>
+             <button id="manageDeckBtn" class="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full text-sm text-slate-600 hover:text-slate-900 transition shadow-md flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-collection" viewBox="0 0 16 16"><path d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1zM2.5 7.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1zM2.5 11.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1z"/></svg>
+                 <span id="manageDeckBtnText">Manage Deck</span>
+             </button>
+        </div>
          <button id="feedbackBtn" class="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full text-sm text-slate-600 hover:text-slate-900 transition shadow-md">Give Feedback</button>
     </footer>
     
-    <!-- Add Card Modal -->
+    <!-- Add/Edit Card Modal -->
     <div id="addCardModal" class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 relative">
             <button id="closeModalBtn" class="absolute top-4 right-4 text-slate-500 hover:text-slate-800">&times;</button>
-            <h3 class="text-xl font-semibold mb-4">Add a New Flashcard</h3>
+            <h3 id="modalTitle" class="text-xl font-semibold mb-4">Add a New Flashcard</h3>
             <form id="addCardForm">
+                <!-- Screenshot Upload -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 text-left mb-2">Upload a screenshot</label>
+                    <div id="dropZone" class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md transition-colors duration-200">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="flex text-sm text-slate-600 justify-center">
+                                <label for="screenshotUpload" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                    <span>Upload a file</span>
+                                    <input id="screenshotUpload" name="screenshotUpload" type="file" class="sr-only" accept="image/*">
+                                </label>
+                                <p class="pl-1">or drag and drop</p>
+                            </div>
+                            <p class="text-xs text-slate-500">PNG, JPG, GIF</p>
+                            <p id="fileName" class="text-xs text-slate-700 font-medium pt-1"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center my-4 text-sm font-semibold text-slate-500">--- OR ---</div>
+                
+                <!-- Manual Entry -->
                 <div class="mb-4">
                     <label for="cardTitle" class="block text-sm font-medium text-slate-700 text-left mb-1">Title</label>
                     <input type="text" id="cardTitle" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., The Future of Quantum Computing" required>
@@ -208,18 +259,30 @@
                     <label for="cardSummary" class="block text-sm font-medium text-slate-700 text-left mb-1">Summary</label>
                     <textarea id="cardSummary" rows="4" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Provide a brief summary of the topic." required></textarea>
                 </div>
-                 <div class="text-right">
+                 <div class="flex justify-end items-center gap-4">
                     <button id="generateAIBtn" type="button" class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md font-semibold hover:bg-indigo-200 transition flex items-center gap-2">
                          <svg id="ai-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 13.5c.34.34.66.7.97 1.09.28.36.55.73.81 1.12.26.39.52.78.77 1.18.25.4.5.8.74 1.21.24.41.48.82.72 1.24.23.4.47.8.7 1.19.23.39.46.78.68 1.17.22.39.44.78.65 1.17s.42.78.62 1.17c.2.39.4.78.59 1.17.19.39.38.78.56 1.17.18.39.36.78.54 1.17.18.39.35.78.52 1.17.17.39.34.78.51 1.17.17.39.33.78.49 1.17.16.39.32.78.48 1.17.16.39.31.78.46 1.17.15.39.3.78.45 1.17.15.39.29.78.43 1.17.14.39.28.78.42 1.17.14.39.27.78.41 1.17.14.39.27.78.4 1.17.13.39.26.78.39 1.17.13.39.25.78.38 1.17.13.39.25.78.37 1.17.12.39.24.78.36 1.17.12.39.23.78.35 1.17.12.39.23.78.34 1.17.11.39.22.78.33 1.17.11.39.22.78.32 1.17.1.39.21.78.31 1.17.1.39.2.78.3 1.17.1.39.19.78.29 1.17.1.39.19.78.28 1.17.09.39.18.78.27 1.17.09.39.18.78.27 1.17.09.39.17.78.26 1.17.09.39.17.78.25 1.17.08.39.16.78.24 1.17.08.39.16.78.24 1.17.08.39.15.78.23 1.17.08.39.15.78.22 1.17.07.39.14.78.21 1.17.07.39.14.78.21 1.17.07.39.13.78.2 1.17.07.39.13.78.2 1.17.06.39.12.78.19 1.17.06.39.12.78.18 1.17.06.39.12.78.18 1.17.06.39.11.78.17 1.17.05.39.11.78.16 1.17.05.39.1.78.15 1.17.05.39.1.78.15 1.17.05.39.09.78.14 1.17.04.39.09.78.13 1.17.04.39.08.78.12 1.17.04.39.08.78.12 1.17.04.39.07.78.11 1.17.03.39.07.78.1 1.17.03.39.06.78.09 1.17.03.39.06.78.09 1.17.03.39.05.78.08 1.17.02.39.05.78.07 1.17.02.39.04.78.06 1.17.02.39.04.78.06 1.17.02.39.03.78.05 1.17.01.39.03.78.04 1.17.01.39.02.78.03 1.17.01.39.02.78.03 1.17.01.39.01.78.02 1.17.01.39.01.78.01 1.17z"/><path d="m14.5 9.5-.97-1.09c-.28-.36-.55-.73-.81-1.12c-.26-.39-.52-.78-.77-1.18c-.25-.4-.5-.8-.74-1.21c-.24-.41-.48-.82-.72-1.24c-.23-.4-.47-.8-.7-1.19c-.23-.39-.46-.78-.68-1.17c-.22-.39-.44-.78-.65-1.17s-.42-.78-.62-1.17c-.2-.39-.4-.78-.59-1.17c-.19-.39-.38-.78-.56-1.17c-.18-.39-.36-.78-.54-1.17c-.18-.39-.35-.78-.52-1.17c-.17-.39-.34-.78-.51-1.17c-.17-.39-.33-.78-.49-1.17c-.16-.39-.32-.78-.48-1.17c-.16-.39-.31-.78-.46-1.17c-.15-.39-.3-.78-.45-1.17c-.15-.39-.29-.78-.43-1.17c-.14-.39-.28-.78-.42-1.17c-.14-.39-.27-.78-.41-1.17c-.14-.39-.27-.78-.4-1.17c-.13-.39-.26-.78-.39-1.17c-.13-.39-.25-.78-.38-1.17c-.13-.39-.25-.78-.37-1.17c-.12-.39-.24-.78-.36-1.17c-.12-.39-.23-.78-.35-1.17c-.12-.39-.23-.78-.34-1.17c-.11-.39-.22-.78-.33-1.17c-.11-.39-.22-.78-.32-1.17c-.1-.39-.21-.78-.31-1.17c-.1-.39-.2-.78-.3-1.17c-.1-.39-.19-.78-.29-1.17c-.1-.39-.19-.78-.28-1.17c-.09-.39-.18-.78-.27-1.17c-.09-.39-.18-.78-.27-1.17c-.09-.39-.17-.78-.26-1.17c-.09-.39-.17-.78-.25-1.17c-.08-.39-.16-.78-.24-1.17c-.08-.39-.16-.78-.24-1.17c-.08-.39-.15-.78-.23-1.17c-.08-.39-.15-.78-.22-1.17c-.07-.39-.14-.78-.21-1.17c-.07-.39-.14-.78-.21-1.17c-.07-.39-.13-.78-.2-1.17c-.07-.39-.13-.78-.2-1.17c-.06-.39-.12-.78-.19-1.17c-.06-.39-.12-.78-.18-1.17c-.06-.39-.12-.78-.18-1.17c-.06-.39-.11-.78-.17-1.17c-.05-.39-.11-.78-.16-1.17c-.05-.39-.1-.78-.15-1.17c-.05-.39-.1-.78-.15-1.17c-.05-.39-.09-.78-.14-1.17c-.04-.39-.09-.78-.13-1.17c-.04-.39-.08-.78-.12-1.17c-.04-.39-.08-.78-.12-1.17c-.04-.39-.07-.78-.11-1.17c-.03-.39-.07-.78-.1-1.17c-.03-.39-.06-.78-.09-1.17c-.03-.39-.06-.78-.09-1.17c-.03-.39-.05-.78-.08-1.17c-.02-.39-.05-.78-.07-1.17c-.02-.39-.04-.78-.06-1.17c-.02-.39-.04-.78-.06-1.17c-.02-.39-.03-.78-.05-1.17c-.01-.39-.03-.78-.04-1.17c-.01-.39-.02-.78-.03-1.17c-.01-.39-.02-.78-.03-1.17c-.01-.39-.01-.78-.02-1.17c-.01-.39-.01-.78-.01-1.17z"/></svg>
                          <svg id="ai-loader" class="animate-spin h-5 w-5 text-indigo-700 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                          </svg>
-                         <span id="ai-btn-text">Generate with AI</span>
+                         <span id="ai-btn-text">Generate Market Data</span>
                     </button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md font-semibold hover:bg-indigo-700 transition">Add Card to Deck</button>
+                    <button id="formSubmitBtn" type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md font-semibold hover:bg-indigo-700 transition">Add Card to Deck</button>
                 </div>
             </form>
+        </div>
+    </div>
+    
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <h3 class="text-lg font-semibold mb-2">Confirm Deletion</h3>
+            <p id="deleteConfirmText" class="text-slate-600 mb-6">Are you sure you want to delete the selected card(s)? This action cannot be undone.</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancelDeleteBtn" class="px-6 py-2 bg-slate-200 text-slate-800 rounded-md font-semibold hover:bg-slate-300 transition">Cancel</button>
+                <button id="confirmDeleteBtn" class="px-6 py-2 bg-red-600 text-white rounded-md font-semibold hover:bg-red-700 transition">Delete</button>
+            </div>
         </div>
     </div>
 
@@ -228,7 +291,7 @@
         const { jsPDF } = window.jspdf;
         const apiKey = "AIzaSyD9xRkAan0WhW8GTegveSaU5gaInCO4Yy0";
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
+        const LOCAL_STORAGE_KEY = 'aiFlashcardsData';
 
         // --- Helper function to create chart HTML ---
         function createBarChart(data, unit) {
@@ -245,33 +308,61 @@
             return `<div class="market-chart">${bars}</div>`;
         }
         
+        // --- Data Persistence Functions ---
+        function loadData() {
+            const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (savedData) {
+                try {
+                    const parsedData = JSON.parse(savedData);
+                    return Array.isArray(parsedData) && parsedData.length > 0 ? parsedData : getDefaultData();
+                } catch (e) {
+                    console.error("Error parsing saved data:", e);
+                    return getDefaultData(); // Return default if parsing fails
+                }
+            }
+            return getDefaultData(); // Return default if no data saved
+        }
+
+        function saveData() {
+             try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(flashcardsData));
+            } catch (e) {
+                console.error("Error saving data:", e);
+                alert("Could not save flashcards. Your browser's storage might be full or private mode is enabled.");
+            }
+        }
+
+        function getDefaultData() {
+             return [
+                {
+                    front: "FDA Approves Zoryve Cream",
+                    summary: "The FDA has approved roflumilast 0.05% cream for pediatric atopic dermatitis, a non-contagious chronic skin condition. This steroid-free, once-daily treatment targets the underlying inflammatory causes of eczema.",
+                    marketInfo: `
+                        <h3>Market Snapshot: Atopic Dermatitis</h3>
+                        <p>The global atopic dermatitis market is projected to grow from ~$14B in 2024 to over $22B by 2029, with a CAGR of <strong>9.8%</strong>. This growth is driven by rising prevalence and the launch of novel biologic and non-steroidal therapies.</p>
+                        ${createBarChart([
+                            { year: 2021, value: 11.2 }, { year: 2022, value: 12.1 }, { year: 2023, value: 13.0 }, { year: 2024, value: 14.1 }, { year: 2025, value: 15.5 }
+                        ], '$')}
+                    `,
+                    chartData: [ { year: 2021, value: 11.2 }, { year: 2022, value: 12.1 }, { year: 2023, value: 13.0 }, { year: 2024, value: 14.1 }, { year: 2025, value: 15.5 } ]
+                },
+                {
+                    front: "Roche's $2.7B Carmot Deal",
+                    summary: "Roche announced a definitive merger agreement to acquire Carmot Therapeutics for $2.7 billion upfront, gaining access to its R&D portfolio of clinical-stage incretins, including a promising Phase-2 ready dual GLP-1/GIP agonist, CT-388.",
+                    marketInfo: `
+                        <h3>Market Snapshot: Obesity Drugs</h3>
+                        <p>The global obesity drug market is experiencing explosive growth, projected to soar from ~$35B in 2024 to over $100B by 2030, with a CAGR of over <strong>25%</strong>. This is fueled by highly effective GLP-1 agonists.</p>
+                        ${createBarChart([
+                            { year: 2021, value: 2.5 }, { year: 2022, value: 6 }, { year: 2023, value: 20 }, { year: 2024, value: 35 }, { year: 2025, value: 55 }
+                        ], '$')}
+                    `,
+                    chartData: [ { year: 2021, value: 2.5 }, { year: 2022, value: 6 }, { year: 2023, value: 20 }, { year: 2024, value: 35 }, { year: 2025, value: 55 } ]
+                },
+            ];
+        }
+        
         // --- Initial Flashcard Data ---
-        let flashcardsData = [
-            {
-                front: "FDA Approves Zoryve Cream",
-                summary: "The FDA has approved roflumilast 0.05% cream for pediatric atopic dermatitis, a non-contagious chronic skin condition. This steroid-free, once-daily treatment targets the underlying inflammatory causes of eczema.",
-                marketInfo: `
-                    <h3>Market Snapshot: Atopic Dermatitis</h3>
-                    <p>The global atopic dermatitis market is projected to grow from ~$14B in 2024 to over $22B by 2029, with a CAGR of <strong>9.8%</strong>. This growth is driven by rising prevalence and the launch of novel biologic and non-steroidal therapies.</p>
-                    ${createBarChart([
-                        { year: 2021, value: 11.2 }, { year: 2022, value: 12.1 }, { year: 2023, value: 13.0 }, { year: 2024, value: 14.1 }, { year: 2025, value: 15.5 }
-                    ], '$')}
-                `,
-                chartData: [ { year: 2021, value: 11.2 }, { year: 2022, value: 12.1 }, { year: 2023, value: 13.0 }, { year: 2024, value: 14.1 }, { year: 2025, value: 15.5 } ]
-            },
-            {
-                front: "Roche's $2.7B Carmot Deal",
-                summary: "Roche announced a definitive merger agreement to acquire Carmot Therapeutics for $2.7 billion upfront, gaining access to its R&D portfolio of clinical-stage incretins, including a promising Phase-2 ready dual GLP-1/GIP agonist, CT-388.",
-                marketInfo: `
-                    <h3>Market Snapshot: Obesity Drugs</h3>
-                    <p>The global obesity drug market is experiencing explosive growth, projected to soar from ~$35B in 2024 to over $100B by 2030, with a CAGR of over <strong>25%</strong>. This is fueled by highly effective GLP-1 agonists.</p>
-                    ${createBarChart([
-                        { year: 2021, value: 2.5 }, { year: 2022, value: 6 }, { year: 2023, value: 20 }, { year: 2024, value: 35 }, { year: 2025, value: 55 }
-                    ], '$')}
-                `,
-                chartData: [ { year: 2021, value: 2.5 }, { year: 2022, value: 6 }, { year: 2023, value: 20 }, { year: 2024, value: 35 }, { year: 2025, value: 55 } ]
-            },
-        ];
+        let flashcardsData = loadData();
 
         // --- DOM Elements ---
         const frontEl = document.getElementById('flashcard-front').querySelector('h2');
@@ -287,6 +378,7 @@
         const exportTxtBtn = document.getElementById('exportTxtBtn');
         const flashcardEl = document.querySelector('.flashcard');
         const feedbackBtn = document.getElementById('feedbackBtn');
+        const actionControls = document.getElementById('action-controls');
         
         // Modal Elements
         const addCardBtn = document.getElementById('addCardBtn');
@@ -297,10 +389,35 @@
         const aiLoader = document.getElementById('ai-loader');
         const aiIcon = document.getElementById('ai-icon');
         const aiBtnText = document.getElementById('ai-btn-text');
+        const screenshotUpload = document.getElementById('screenshotUpload');
+        const fileNameEl = document.getElementById('fileName');
+        const dropZone = document.getElementById('dropZone');
+        const modalTitle = document.getElementById('modalTitle');
+        const formSubmitBtn = document.getElementById('formSubmitBtn');
+
+        // Selection Elements
+        const manageDeckBtn = document.getElementById('manageDeckBtn');
+        const manageDeckBtnText = document.getElementById('manageDeckBtnText');
+        const selectionControls = document.getElementById('selection-controls');
+        const editCardBtn = document.getElementById('editCardBtn');
+        const deleteCardsBtn = document.getElementById('deleteCardsBtn');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const selectionCheckboxContainer = document.getElementById('selection-checkbox-container');
+        const selectionCheckbox = document.getElementById('selection-checkbox');
+
+        // Delete Confirmation Modal Elements
+        const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+        const deleteConfirmText = document.getElementById('deleteConfirmText');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
 
+        // --- State Variables ---
         let currentCardIndex = 0;
         let marketDataCache = null;
+        let isSelectMode = false;
+        let selectedIndices = [];
+        let editingCardIndex = null;
 
         // --- Core Functions ---
         function updateCardContent() {
@@ -311,7 +428,16 @@
                 cardCounterEl.textContent = `0 / 0`;
                 prevBtn.disabled = true;
                 nextBtn.disabled = true;
+                if(isSelectMode) toggleSelectMode(); // Exit select mode if no cards left
                 return;
+            }
+
+            // Ensure currentCardIndex is valid
+            if (currentCardIndex >= flashcardsData.length) {
+                currentCardIndex = flashcardsData.length - 1;
+            }
+            if (currentCardIndex < 0) {
+                currentCardIndex = 0;
             }
 
             const card = flashcardsData[currentCardIndex];
@@ -328,6 +454,8 @@
             prevBtn.disabled = currentCardIndex === 0;
             nextBtn.disabled = currentCardIndex === flashcardsData.length - 1;
 
+            renderSelectionState(); // Update checkbox visibility and state
+
             // Reset tabs to default view
             document.querySelector('[data-content="summary"]').classList.add('active-tab');
             document.querySelector('[data-content="market"]').classList.remove('active-tab');
@@ -341,8 +469,117 @@
                 [flashcardsData[i], flashcardsData[j]] = [flashcardsData[j], flashcardsData[i]];
             }
             currentCardIndex = 0;
+            if (isSelectMode) {
+                selectedIndices = [];
+                updateSelectionControls();
+            }
             updateCardContent();
+            saveData(); // Save the shuffled order
         }
+        
+        // --- Selection & Management Functions ---
+        function toggleSelectMode() {
+            isSelectMode = !isSelectMode;
+            actionControls.classList.toggle('hidden');
+            actionControls.classList.toggle('flex');
+            selectionControls.classList.toggle('hidden');
+            selectionControls.classList.toggle('flex');
+            
+            if (isSelectMode) {
+                manageDeckBtnText.textContent = "Cancel";
+            } else {
+                manageDeckBtnText.textContent = "Manage Deck";
+                selectedIndices = [];
+            }
+            updateSelectionControls();
+            renderSelectionState();
+        }
+
+        function renderSelectionState() {
+             if (isSelectMode && flashcardsData.length > 0) {
+                selectionCheckboxContainer.classList.remove('hidden');
+                selectionCheckbox.checked = selectedIndices.includes(currentCardIndex);
+            } else {
+                selectionCheckboxContainer.classList.add('hidden');
+            }
+        }
+        
+        function updateSelectionControls() {
+            const numSelected = selectedIndices.length;
+            editCardBtn.disabled = numSelected !== 1;
+            deleteCardsBtn.disabled = numSelected === 0;
+
+            if (numSelected > 0 && numSelected === flashcardsData.length) {
+                selectAllBtn.textContent = 'Deselect All';
+            } else {
+                selectAllBtn.textContent = 'Select All';
+            }
+        }
+
+        function handleCardSelection() {
+            const index = currentCardIndex;
+            const isSelected = selectedIndices.includes(index);
+            if (isSelected) {
+                selectedIndices = selectedIndices.filter(i => i !== index);
+            } else {
+                selectedIndices.push(index);
+            }
+            renderSelectionState();
+            updateSelectionControls();
+        }
+
+        function handleSelectAll() {
+            if (selectedIndices.length === flashcardsData.length) {
+                selectedIndices = []; // Deselect all
+            } else {
+                selectedIndices = Array.from({length: flashcardsData.length}, (_, i) => i); // Select all
+            }
+            renderSelectionState();
+            updateSelectionControls();
+        }
+
+        function editSelectedCard() {
+            if (selectedIndices.length !== 1) return;
+            
+            editingCardIndex = selectedIndices[0];
+            const cardToEdit = flashcardsData[editingCardIndex];
+            
+            // Pre-fill modal
+            document.getElementById('cardTitle').value = cardToEdit.front;
+            document.getElementById('cardSummary').value = cardToEdit.summary;
+            // Note: We don't re-fill the market data as that's generated. User can re-generate if needed.
+            marketDataCache = {
+                marketName: 'Existing Data',
+                analysis: 'To change market data, please generate it again.',
+                cagr: 'N/A',
+                chartData: cardToEdit.chartData
+            };
+
+
+            modalTitle.textContent = "Edit Flashcard";
+            formSubmitBtn.textContent = "Save Changes";
+            
+            addCardModal.classList.remove('hidden');
+        }
+
+        function deleteSelectedCards() {
+            const numSelected = selectedIndices.length;
+            if(numSelected === 0) return;
+
+            deleteConfirmText.textContent = `Are you sure you want to delete ${numSelected} card(s)? This action cannot be undone.`;
+            deleteConfirmModal.classList.remove('hidden');
+        }
+
+        function confirmDeletion() {
+            flashcardsData = flashcardsData.filter((_, index) => !selectedIndices.includes(index));
+            selectedIndices = [];
+
+            saveData();
+            updateSelectionControls();
+            updateCardContent();
+            deleteConfirmModal.classList.add('hidden');
+        }
+
 
         // --- AI & Form Functions ---
         async function fetchMarketData(topic) {
@@ -388,31 +625,31 @@
                 const cleanedText = text.replace(/```json/g, '').replace(/```/g, '');
                 const jsonData = JSON.parse(cleanedText);
                 marketDataCache = jsonData; // Cache the data
-                alert('AI data generated successfully! You can now add the card.');
+                alert('Market data generated successfully! You can now add the card.');
 
             } catch (error) {
                 console.error("AI Generation Error:", error);
-                alert(`Failed to generate AI data. Please check the console for details.\n${error.message}`);
+                alert(`Failed to generate market data. Please check the console for details.\n${error.message}`);
                 marketDataCache = null;
             } finally {
                 aiLoader.classList.add('hidden');
                 aiIcon.classList.remove('hidden');
-                aiBtnText.textContent = "Generate with AI";
+                aiBtnText.textContent = "Generate Market Data";
                 generateAIBtn.disabled = false;
             }
         }
         
-        function addCard(event) {
+        function saveCard(event) {
             event.preventDefault();
             const title = document.getElementById('cardTitle').value;
             const summary = document.getElementById('cardSummary').value;
 
             if (!marketDataCache) {
-                alert('Please generate the AI market data first.');
+                alert('Please generate the AI market data first before saving.');
                 return;
             }
 
-            const newCard = {
+            const cardData = {
                 front: title,
                 summary: summary,
                 marketInfo: `
@@ -422,29 +659,94 @@
                 `,
                 chartData: marketDataCache.chartData
             };
+            
+            if (editingCardIndex !== null) {
+                // Editing existing card
+                flashcardsData[editingCardIndex] = cardData;
+            } else {
+                // Adding new card
+                flashcardsData.push(cardData);
+                currentCardIndex = flashcardsData.length - 1;
+            }
 
-            flashcardsData.push(newCard);
-            currentCardIndex = flashcardsData.length - 1;
+            saveData(); 
             updateCardContent();
             
-            // Close modal and reset form
+            closeAndResetModal();
+        }
+
+        function closeAndResetModal() {
             addCardModal.classList.add('hidden');
             addCardForm.reset();
+            fileNameEl.textContent = '';
             marketDataCache = null;
+            editingCardIndex = null;
+            // Reset modal to "Add" state
+            modalTitle.textContent = "Add a New Flashcard";
+            formSubmitBtn.textContent = "Add Card to Deck";
+            if (isSelectMode) {
+                toggleSelectMode(); // Exit select mode after editing
+            }
+        }
+
+        // --- Screenshot AI Functions ---
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async function analyzeScreenshot(file) {
+            const statusEl = fileNameEl;
+            statusEl.textContent = 'Analyzing image...';
+            try {
+                const base64Data = await fileToBase64(file);
+                const prompt = `Analyze the attached screenshot. Extract a concise title and a brief summary of the content. Return the result ONLY in the following JSON format: {"title": "Extracted Title", "summary": "Extracted Summary"}`;
+                
+                const payload = {
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            { inlineData: { mimeType: file.type, data: base64Data } }
+                        ]
+                    }]
+                };
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const errorBody = await response.json().catch(() => ({ error: { message: 'Could not parse error response.' } }));
+                    const errorMessage = errorBody.error?.message || response.statusText;
+                    throw new Error(`API error (${response.status}): ${errorMessage}`);
+                }
+
+                const data = await response.json();
+                const text = data.candidates[0].content.parts[0].text;
+                const cleanedText = text.replace(/```json/g, '').replace(/```/g, '');
+                const jsonData = JSON.parse(cleanedText);
+
+                document.getElementById('cardTitle').value = jsonData.title || '';
+                document.getElementById('cardSummary').value = jsonData.summary || '';
+                statusEl.textContent = `Analyzed: ${file.name}`;
+                alert('Screenshot analyzed and fields populated!');
+
+            } catch(error) {
+                console.error("Screenshot Analysis Error:", error);
+                alert(`Failed to analyze screenshot. Please check the console for details.\n${error.message}`);
+                statusEl.textContent = `Error analyzing ${file.name}`;
+            }
         }
 
         // --- Export Functions ---
-        function exportCardAsPDF() {
-            if (flashcardsData.length === 0) return;
-            const card = flashcardsData[currentCardIndex];
-            // ... (rest of the PDF export code is unchanged)
-        }
-        
-        function exportCardAsText() {
-            if (flashcardsData.length === 0) return;
-            const card = flashcardsData[currentCardIndex];
-            // ... (rest of the text export code is unchanged)
-        }
+        function exportCardAsPDF() { if (flashcardsData.length === 0) return; /* ... unchanged ... */ }
+        function exportCardAsText() { if (flashcardsData.length === 0) return; /* ... unchanged ... */ }
 
         
         // --- Event Listeners ---
@@ -462,24 +764,71 @@
             }
         });
 
-        flipBtn.addEventListener('click', () => {
-            flashcardEl.classList.toggle('is-flipped');
-        });
-
+        flipBtn.addEventListener('click', () => flashcardEl.classList.toggle('is-flipped'));
         shuffleBtn.addEventListener('click', shuffleCards);
         exportPdfBtn.addEventListener('click', exportCardAsPDF);
         exportTxtBtn.addEventListener('click', exportCardAsText);
         
-        // Modal Listeners
+        // Modal & Form Listeners
         addCardBtn.addEventListener('click', () => addCardModal.classList.remove('hidden'));
-        closeModalBtn.addEventListener('click', () => addCardModal.classList.add('hidden'));
-        addCardForm.addEventListener('submit', addCard);
+        closeModalBtn.addEventListener('click', closeAndResetModal);
+        addCardForm.addEventListener('submit', saveCard);
+        
         generateAIBtn.addEventListener('click', () => {
             const title = document.getElementById('cardTitle').value;
             if (title) {
                 fetchMarketData(title);
             } else {
-                alert('Please enter a title first.');
+                alert('Please enter a title first, or generate one from a screenshot.');
+            }
+        });
+        
+        // Selection Listeners
+        manageDeckBtn.addEventListener('click', toggleSelectMode);
+        selectionCheckbox.addEventListener('change', handleCardSelection);
+        selectAllBtn.addEventListener('click', handleSelectAll);
+        editCardBtn.addEventListener('click', editSelectedCard);
+        deleteCardsBtn.addEventListener('click', deleteSelectedCards);
+        confirmDeleteBtn.addEventListener('click', confirmDeletion);
+        cancelDeleteBtn.addEventListener('click', () => deleteConfirmModal.classList.add('hidden'));
+
+
+        // --- Drag and Drop Listeners ---
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                 const file = files[0];
+                 if (file.type.startsWith('image/')) {
+                    screenshotUpload.files = files; // Make the file available to the input
+                    fileNameEl.textContent = `Dropped: ${file.name}`;
+                    analyzeScreenshot(file);
+                } else {
+                    alert('Please drop an image file.');
+                }
+            }
+        });
+
+        screenshotUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileNameEl.textContent = `Selected: ${file.name}`;
+                analyzeScreenshot(file);
             }
         });
 
