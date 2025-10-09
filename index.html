@@ -745,8 +745,146 @@
         }
 
         // --- Export Functions ---
-        function exportCardAsPDF() { if (flashcardsData.length === 0) return; /* ... unchanged ... */ }
-        function exportCardAsText() { if (flashcardsData.length === 0) return; /* ... unchanged ... */ }
+        function exportCardAsPDF() {
+            if (flashcardsData.length === 0) return;
+
+            const card = flashcardsData[currentCardIndex];
+            const { jsPDF } = window.jspdf;
+
+            // Create a temporary container for rendering the PDF content
+            const pdfContainer = document.createElement('div');
+            // Style for off-screen rendering
+            pdfContainer.style.position = 'absolute';
+            pdfContainer.style.left = '-9999px';
+            pdfContainer.style.width = '650px'; // Fixed width for consistent output
+            pdfContainer.style.padding = '20px';
+            pdfContainer.style.fontFamily = 'Inter, sans-serif';
+            pdfContainer.style.backgroundColor = '#ffffff';
+            pdfContainer.style.color = '#1e293b'; // slate-800
+
+            // --- Front Side Content ---
+            const frontPage = document.createElement('div');
+            frontPage.style.marginBottom = '30px';
+            frontPage.style.borderBottom = '1px solid #e2e8f0'; // slate-200
+            frontPage.style.paddingBottom = '20px';
+            
+            const frontHeader = document.createElement('h1');
+            frontHeader.textContent = 'Flashcard: Front';
+            frontHeader.style.fontSize = '20px';
+            frontHeader.style.fontWeight = 'bold';
+            frontHeader.style.marginBottom = '15px';
+            
+            const frontContent = document.createElement('p');
+            frontContent.textContent = card.front;
+            frontContent.style.fontSize = '24px';
+            frontContent.style.textAlign = 'center';
+            frontContent.style.padding = '40px 0';
+
+            frontPage.appendChild(frontHeader);
+            frontPage.appendChild(frontContent);
+
+            // --- Back Side Content ---
+            const backPage = document.createElement('div');
+
+            const backHeader = document.createElement('h1');
+            backHeader.textContent = 'Flashcard: Back';
+            backHeader.style.fontSize = '20px';
+            backHeader.style.fontWeight = 'bold';
+            backHeader.style.marginBottom = '15px';
+
+            const summaryHeader = document.createElement('h2');
+            summaryHeader.textContent = 'Summary';
+            summaryHeader.style.fontSize = '18px';
+            summaryHeader.style.fontWeight = '600';
+            summaryHeader.style.color = '#4f46e5';
+            summaryHeader.style.marginBottom = '8px';
+
+            const summaryContent = document.createElement('p');
+            summaryContent.textContent = card.summary;
+            summaryContent.style.fontSize = '14px';
+            summaryContent.style.lineHeight = '1.6';
+            summaryContent.style.marginBottom = '20px';
+
+            // Create market content from innerHTML to preserve chart
+            const marketContentWrapper = document.createElement('div');
+            marketContentWrapper.innerHTML = card.marketInfo;
+            // Ensure chart renders correctly by re-applying essential styles
+            const chartEl = marketContentWrapper.querySelector('.market-chart');
+            if (chartEl) {
+                 Object.assign(chartEl.style, {
+                    width: '100%', height: '120px', display: 'flex', justifyContent: 'space-around', alignItems: 'flex-end',
+                    borderLeft: '2px solid #e5e7eb', borderBottom: '2px solid #e5e7eb', paddingTop: '10px', marginTop: '1rem'
+                });
+                marketContentWrapper.querySelectorAll('.chart-bar-group').forEach(el => Object.assign(el.style, { display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }));
+                marketContentWrapper.querySelectorAll('.chart-bar').forEach(el => Object.assign(el.style, { width: '25px', backgroundColor: '#6366f1', borderRadius: '4px 4px 0 0', position: 'relative' }));
+                marketContentWrapper.querySelectorAll('.bar-value').forEach(el => Object.assign(el.style, { position: 'absolute', top: '-20px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.7rem', fontWeight: '600', color: '#4f46e5' }));
+                marketContentWrapper.querySelectorAll('.bar-year').forEach(el => Object.assign(el.style, { fontSize: '0.7rem', color: '#6b7280', marginTop: '4px' }));
+            }
+            
+            backPage.appendChild(backHeader);
+            backPage.appendChild(summaryHeader);
+            backPage.appendChild(summaryContent);
+            backPage.appendChild(marketContentWrapper);
+            
+            pdfContainer.appendChild(frontPage);
+            pdfContainer.appendChild(backPage);
+            document.body.appendChild(pdfContainer);
+
+            // Use html2canvas to capture the styled container
+            html2canvas(pdfContainer, { scale: 2 })
+                .then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'px',
+                        format: [canvas.width, canvas.height]
+                    });
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    pdf.save(`${card.front.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+                })
+                .catch(err => {
+                    console.error("PDF Export Error:", err);
+                    alert("Sorry, something went wrong while exporting to PDF.");
+                })
+                .finally(() => {
+                    document.body.removeChild(pdfContainer);
+                });
+        }
+        
+        function exportCardAsText() {
+            if (flashcardsData.length === 0) return;
+
+            const card = flashcardsData[currentCardIndex];
+            
+            // Create a temporary element to parse HTML and extract text content
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = card.marketInfo;
+            const marketText = tempDiv.textContent || tempDiv.innerText || "";
+
+            const content = `Title: ${card.front}\n\n` +
+                          `--------------------\n` +
+                          `Summary\n` +
+                          `--------------------\n${card.summary}\n\n` +
+                          `--------------------\n` +
+                          `Market Snapshot\n` +
+                          `--------------------\n${marketText.replace(/^Market Snapshot/, '').trim()}`;
+            
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `${card.front.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
 
         
         // --- Event Listeners ---
