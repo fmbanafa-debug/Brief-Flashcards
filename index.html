@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Flashcards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JS libraries for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" xintegrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoVBL5gI9kLmbGkknNRZn1emmkSUpA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .flashcard-container {
+            perspective: 1000px;
+        }
+        .flashcard {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1);
+        }
+        .is-flipped {
+            transform: rotateY(180deg);
+        }
+        .flashcard-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background-color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .flashcard-back {
+            transform: rotateY(180deg);
+            justify-content: flex-start;
+            align-items: flex-start;
+            overflow-y: auto;
+        }
+        .flashcard-back h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #4f46e5;
+        }
+        .flashcard-back p {
+            font-size: 0.90rem;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+        }
+        /* Tab Styles */
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .active-tab {
+            color: #4f46e5;
+            border-bottom-color: #4f46e5;
+        }
+        /* Feedback Panel */
+        #feedbackPanel {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        /* Market Chart Styles */
+        .market-chart {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            border-left: 2px solid #e5e7eb;
+            border-bottom: 2px solid #e5e7eb;
+            padding-top: 10px;
+            margin-top: 1rem;
+        }
+        .chart-bar-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-end;
+        }
+        .chart-bar {
+            width: 25px;
+            background-color: #6366f1;
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            transition: height 0.5s ease-out;
+        }
+        .bar-value {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #4f46e5;
+        }
+        .bar-year {
+            font-size: 0.7rem;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 text-slate-800 flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-2xl mx-auto p-4 sm:p-6 text-center">
+        <!-- Header -->
+        <header class="mb-6">
+            <h1 class="text-4xl font-bold text-slate-900">Daily Brief Flashcards</h1>
+            <p class="text-slate-600 mt-2">Enhanced with In-Depth Analysis & Market Data</p>
+        </header>
+
+        <!-- Flashcard Component -->
+        <div class="flashcard-container w-full h-[30rem] sm:h-[28rem]">
+            <div class="flashcard">
+                <div id="flashcard-front" class="flashcard-face">
+                    <h2 class="text-2xl sm:text-3xl font-semibold text-center"></h2>
+                </div>
+                <div class="flashcard-face flashcard-back">
+                     <div class="w-full flex flex-col h-full">
+                        <div class="flex-shrink-0 w-full flex border-b border-slate-200 mb-2">
+                            <button class="tab-btn active-tab" data-content="summary">Summary</button>
+                            <button class="tab-btn" data-content="market">Market Snapshot</button>
+                        </div>
+                        <div class="flex-grow overflow-y-auto">
+                            <div id="summary-content" class="tab-content text-left"></div>
+                            <div id="market-content" class="tab-content hidden text-left"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="flex items-center justify-center space-x-2 sm:space-x-4 mt-6">
+            <button id="shuffleBtn" class="p-3 bg-white/80 border border-slate-200 rounded-full shadow-sm text-slate-700 font-semibold hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200" title="Shuffle Cards">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+            </button>
+            <button id="flipBtn" class="px-6 py-3 bg-indigo-600 text-white rounded-full shadow-lg font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 17l5-5-5-5M19.8 12H2M8 7l-5 5 5 5"/></svg>
+                <span>Flip Card</span>
+            </button>
+            <!-- Export Buttons -->
+            <button id="exportPdfBtn" class="p-3 bg-white/80 border border-slate-200 rounded-full shadow-sm text-slate-700 font-semibold hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200" title="Export as PDF">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
+            </button>
+             <button id="exportTxtBtn" class="p-3 bg-white/80 border border-slate-200 rounded-full shadow-sm text-slate-700 font-semibold hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200" title="Export as Text">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"></line><line x1="9" y1="9" x2="9" y2="9"></line></svg>
+            </button>
+        </div>
+
+        <!-- Navigation Controls -->
+        <div class="flex items-center justify-center space-x-4 mt-4">
+            <button id="prevBtn" class="p-4 bg-white/80 border border-slate-200 rounded-full shadow-sm text-slate-700 font-semibold hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" title="Previous">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <span id="cardCounter" class="text-lg font-medium text-slate-700 w-24"></span>
+            <button id="nextBtn" class="p-4 bg-white/80 border border-slate-200 rounded-full shadow-sm text-slate-700 font-semibold hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" title="Next">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Footer and Feedback -->
+    <footer class="fixed bottom-0 left-0 right-0 p-4 text-center">
+         <button id="feedbackBtn" class="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full text-sm text-slate-600 hover:text-slate-900 transition">Give Feedback</button>
+    </footer>
+
+    <div id="feedbackPanel" class="fixed bottom-0 left-0 right-0 bg-white p-6 rounded-t-2xl shadow-2xl transform translate-y-full w-full max-w-2xl mx-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-lg">How was this experience?</h3>
+            <button id="closeFeedbackBtn" class="text-slate-500 hover:text-slate-800">&times;</button>
+        </div>
+        <div class="flex justify-around">
+            <button class="text-4xl hover:scale-125 transition-transform feedback-emoji">😞</button>
+            <button class="text-4xl hover:scale-125 transition-transform feedback-emoji">😐</button>
+            <button class="text-4xl hover:scale-125 transition-transform feedback-emoji">😊</button>
+            <button class="text-4xl hover:scale-125 transition-transform feedback-emoji">🤩</button>
+        </div>
+        <p id="feedbackThanks" class="text-center mt-4 text-green-600 font-medium opacity-0 transition-opacity">Thanks for your feedback!</p>
+    </div>
+
+
+        <script>
+        const { jsPDF } = window.jspdf;
+
+        // --- Helper function to create chart HTML ---
+        function createBarChart(data, unit) {
+            const maxValue = Math.max(...data.map(d => d.value));
+            const bars = data.map(d => `
+                <div class="chart-bar-group">
+                    <div class="chart-bar" style="height: ${(d.value / maxValue) * 100}%;">
+                        <span class="bar-value">${unit}${d.value}</span>
+                    </div>
+                    <span class="bar-year">${d.year}</span>
+                </div>
+            `).join('');
+            return `<div class="market-chart">${bars}</div>`;
+        }
+        
+        // --- Flashcard Data ---
+        let flashcardsData = [
+            {
+                front: "FDA Approves Zoryve Cream",
+                summary: "The FDA has approved roflumilast 0.05% cream for pediatric atopic dermatitis, a non-contagious chronic skin condition. This steroid-free, once-daily treatment targets the underlying inflammatory causes of eczema.",
+                marketInfo: `
+                    <h3>Market Snapshot: Atopic Dermatitis</h3>
+                    <p>The global atopic dermatitis market is projected to grow from ~$14B in 2024 to over $22B by 2029, with a CAGR of <strong>9.8%</strong>. This growth is driven by rising prevalence and the launch of novel biologic and non-steroidal therapies.</p>
+                    ${createBarChart([
+                        { year: 2021, value: 11.2 }, { year: 2022, value: 12.1 }, { year: 2023, value: 13.0 }, { year: 2024, value: 14.1 }, { year: 2025, value: 15.5 }
+                    ], '$')}
+                `,
+                chartData: [ { year: 2021, value: 11.2 }, { year: 2022, value: 12.1 }, { year: 2023, value: 13.0 }, { year: 2024, value: 14.1 }, { year: 2025, value: 15.5 } ]
+            },
+            {
+                front: "Roche's $2.7B Carmot Deal",
+                summary: "Roche announced a definitive merger agreement to acquire Carmot Therapeutics for $2.7 billion upfront, gaining access to its R&D portfolio of clinical-stage incretins, including a promising Phase-2 ready dual GLP-1/GIP agonist, CT-388.",
+                marketInfo: `
+                    <h3>Market Snapshot: Obesity Drugs</h3>
+                    <p>The global obesity drug market is experiencing explosive growth, projected to soar from ~$35B in 2024 to over $100B by 2030, with a CAGR of over <strong>25%</strong>. This is fueled by highly effective GLP-1 agonists.</p>
+                    ${createBarChart([
+                        { year: 2021, value: 2.5 }, { year: 2022, value: 6 }, { year: 2023, value: 20 }, { year: 2024, value: 35 }, { year: 2025, value: 55 }
+                    ], '$')}
+                `,
+                chartData: [ { year: 2021, value: 2.5 }, { year: 2022, value: 6 }, { year: 2023, value: 20 }, { year: 2024, value: 35 }, { year: 2025, value: 55 } ]
+            },
+            {
+                front: "Emirati MGX & Altera",
+                summary: "The UAE's technology investment firm, MGX, chaired by Sheikh Tahnoon bin Zayed, has acquired a majority stake in Altera, an American smart chip and semiconductor manufacturer, marking a significant global technology investment for the nation.",
+                marketInfo: `
+                     <h3>Market Snapshot: FPGA & AI Chips</h3>
+                    <p>The Field-Programmable Gate Array (FPGA) market is expected to grow from ~$9B in 2024 to over $16B by 2029, at a CAGR of <strong>12%</strong>, driven by its critical role in accelerating custom AI workloads in data centers and edge computing.</p>
+                     ${createBarChart([
+                        { year: 2021, value: 7.1 }, { year: 2022, value: 7.8 }, { year: 2023, value: 8.5 }, { year: 2024, value: 9.3 }, { year: 2025, value: 10.4 }
+                    ], '$')}
+                `,
+                chartData: [ { year: 2021, value: 7.1 }, { year: 2022, value: 7.8 }, { year: 2023, value: 8.5 }, { year: 2024, value: 9.3 }, { year: 2025, value: 10.4 } ]
+            },
+            {
+                front: "BlackRock's Crypto Investment",
+                summary: "Asset management giant BlackRock has reportedly invested over $600 million into two undisclosed cryptocurrencies. This significant purchase highlights the increasing institutional interest and adoption of digital assets in mainstream finance.",
+                marketInfo: `
+                    <h3>Market Snapshot: Crypto Assets</h3>
+                    <p>The total crypto market capitalization is highly volatile but shows a strong growth trend, projected to potentially exceed $5 trillion in the next major bull cycle, driven by institutional adoption through vehicles like spot ETFs.</p>
+                    ${createBarChart([
+                        { year: 2021, value: 2.2 }, { year: 2022, value: 0.8 }, { year: 2023, value: 1.7 }, { year: 2024, value: 2.5 }, { year: 2025, value: 3.5 }
+                    ], '$')}
+                `,
+                chartData: [ { year: 2021, value: 2.2 }, { year: 2022, value: 0.8 }, { year: 2023, value: 1.7 }, { year: 2024, value: 2.5 }, { year: 2025, value: 3.5 } ]
+            },
+            {
+                front: "New Aging-Related Pathway",
+                summary: "A new research paper in the journal 'Autophagy' identifies a pathway that regulates mitochondrial quality control. This discovery connects cellular biology to the aging process and opens exciting new opportunities for treating cardiovascular diseases.",
+                marketInfo: `
+                    <h3>Market Snapshot: Longevity & Anti-Aging</h3>
+                    <p>The global longevity market, focused on therapies to slow aging, is projected to grow from ~$27B in 2023 to over $44B by 2030, at a CAGR of <strong>7.5%</strong>. Research into pathways like autophagy is a key driver.</p>
+                    ${createBarChart([
+                        { year: 2021, value: 25.1 }, { year: 2022, value: 26.2 }, { year: 2023, value: 27.9 }, { year: 2024, value: 30.1 }, { year: 2025, value: 32.5 }
+                    ], '$')}
+                `,
+                chartData: [ { year: 2021, value: 25.1 }, { year: 2022, value: 26.2 }, { year: 2023, value: 27.9 }, { year: 2024, value: 30.1 }, { year: 2025, value: 32.5 } ]
+            },
+            {
+                front: "Oreo & Reese's Collaboration",
+                summary: "Snack giants Oreo and Reese's have unveiled a major collaboration, creating a chocolate sandwich cookie that features Reese's peanut butter creme. This highly anticipated mashup is expected to be a potent force in the confectionery world.",
+                marketInfo: `
+                    <h3>Market Snapshot: Global Confectionery</h3>
+                    <p>The global confectionery market is a mature but massive industry, valued at over $250B, with a steady CAGR of <strong>3.8%</strong>. Growth is driven by innovation, premiumization, and strategic collaborations like this one.</p>
+                    ${createBarChart([
+                        { year: 2021, value: 235 }, { year: 2022, value: 242 }, { year: 2023, value: 251 }, { year: 2024, value: 260 }, { year: 2025, value: 270 }
+                    ], '$')}
+                `,
+                chartData: [ { year: 2021, value: 235 }, { year: 2022, value: 242 }, { year: 2023, value: 251 }, { year: 2024, value: 260 }, { year: 2025, value: 270 } ]
+            },
+            {
+                front: "Hawaii Settles Plavix Lawsuit",
+                summary: "Hawaii has secured a $700 million settlement with Bristol Myers Squibb and Sanofi over a lawsuit alleging the companies did not adequately warn that the blood-thinner Plavix could be less effective for certain genetic populations.",
+                marketInfo: `
+                    <h3>Market Snapshot: Pharmacogenomics</h3>
+                    <p>The global pharmacogenomics market, which personalizes drug use based on genetics, is set to grow from ~$8B in 2024 to $14B by 2029, a CAGR of <strong>11.5%</strong>. Cases like the Plavix lawsuit accelerate its adoption.</p>
+                     ${createBarChart([
+                        { year: 2021, value: 6.8 }, { year: 2022, value: 7.3 }, { year: 2023, value: 7.9 }, { year: 2024, value: 8.5 }, { year: 2025, value: 9.6 }
+                    ], '$')}
+                `,
+                chartData: [ { year: 2021, value: 6.8 }, { year: 2022, value: 7.3 }, { year: 2023, value: 7.9 }, { year: 2024, value: 8.5 }, { year: 2025, value: 9.6 } ]
+            },
+            {
+                front: "Saudi Food & Drug Authority",
+                summary: "The Saudi Food & Drug Authority has updated guidelines for veterinary vaccines and established new cold chain industry requirements for refrigerated and frozen foods, including electronic temperature and humidity monitoring systems.",
+                marketInfo: `
+                    <h3>Market Snapshot: Saudi Pharma Logistics</h3>
+                    <p>Driven by Saudi Vision 2030, the pharma logistics market in Saudi Arabia is expected to grow significantly, with a CAGR of around <strong>8.5%</strong>, as the country aims to become a premier regional hub for pharmaceuticals.</p>
+                    ${createBarChart([
+                        { year: 2021, value: 1.2 }, { year: 2022, value: 1.3 }, { year: 2023, value: 1.4 }, { year: 2024, value: 1.5 }, { year: 2025, value: 1.7 }
+                    ], '$')}
+                `,
+                chartData: [ { year: 2021, value: 1.2 }, { year: 2022, value: 1.3 }, { year: 2023, value: 1.4 }, { year: 2024, value: 1.5 }, { year: 2025, value: 1.7 } ]
+            }
+        ];
+
+        // --- DOM Elements ---
+        const frontEl = document.getElementById('flashcard-front').querySelector('h2');
+        const summaryContentEl = document.getElementById('summary-content');
+        const marketContentEl = document.getElementById('market-content');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const cardCounterEl = document.getElementById('cardCounter');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const flipBtn = document.getElementById('flipBtn');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const exportTxtBtn = document.getElementById('exportTxtBtn');
+        const flashcardEl = document.querySelector('.flashcard');
+        
+        const feedbackBtn = document.getElementById('feedbackBtn');
+        const feedbackPanel = document.getElementById('feedbackPanel');
+        const closeFeedbackBtn = document.getElementById('closeFeedbackBtn');
+        const feedbackEmojis = document.querySelectorAll('.feedback-emoji');
+        const feedbackThanks = document.getElementById('feedbackThanks');
+
+        let currentCardIndex = 0;
+
+        // --- Functions ---
+        function updateCardContent() {
+            const card = flashcardsData[currentCardIndex];
+            frontEl.textContent = card.front;
+            summaryContentEl.innerHTML = `<p>${card.summary}</p>`;
+            marketContentEl.innerHTML = card.marketInfo;
+            
+            cardCounterEl.textContent = `${currentCardIndex + 1} / ${flashcardsData.length}`;
+            
+            if (flashcardEl.classList.contains('is-flipped')) {
+                flashcardEl.classList.remove('is-flipped');
+            }
+
+            prevBtn.disabled = currentCardIndex === 0;
+            nextBtn.disabled = currentCardIndex === flashcardsData.length - 1;
+
+            // Reset tabs to default view
+            document.querySelector('[data-content="summary"]').classList.add('active-tab');
+            document.querySelector('[data-content="market"]').classList.remove('active-tab');
+            summaryContentEl.classList.remove('hidden');
+            marketContentEl.classList.add('hidden');
+        }
+
+        function shuffleCards() {
+            for (let i = flashcardsData.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [flashcardsData[i], flashcardsData[j]] = [flashcardsData[j], flashcardsData[i]];
+            }
+            currentCardIndex = 0;
+            updateCardContent();
+        }
+
+        function exportCardAsPDF() {
+            const card = flashcardsData[currentCardIndex];
+            const exportContainer = document.createElement('div');
+            // Style the container for a clean A4 look
+            exportContainer.style.position = 'absolute';
+            exportContainer.style.left = '-9999px'; // Position off-screen
+            exportContainer.style.width = '210mm'; // A4 width
+            exportContainer.style.padding = '20mm';
+            exportContainer.style.backgroundColor = 'white';
+            exportContainer.style.fontFamily = "'Inter', sans-serif";
+            exportContainer.style.color = '#333';
+            
+            // Create a style element to ensure chart styles are applied for rendering
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .market-chart { width: 100%; height: 150px; display: flex; justify-content: space-around; align-items: flex-end; border-left: 2px solid #e5e7eb; border-bottom: 2px solid #e5e7eb; padding-top: 10px; margin-top: 1rem; }
+                .chart-bar-group { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; flex-basis: 15%; }
+                .chart-bar { width: 30px; background-color: #6366f1; border-radius: 4px 4px 0 0; position: relative; }
+                .bar-value { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font-size: 10pt; font-weight: 600; color: #4f46e5; }
+                .bar-year { font-size: 10pt; color: #6b7280; margin-top: 5px; }
+            `;
+            exportContainer.appendChild(style);
+
+            const contentDiv = document.createElement('div');
+            // Recreate the content with appropriate styling for PDF
+            contentDiv.innerHTML = `
+                <h1 style="font-size: 28pt; font-weight: bold; color: #1e293b; margin-bottom: 24px; border-bottom: 2px solid #ddd; padding-bottom: 12px;">${card.front}</h1>
+                <h2 style="font-size: 20pt; font-weight: 600; color: #4f46e5; margin-bottom: 12px;">Summary</h2>
+                <p style="font-size: 12pt; line-height: 1.6; margin-bottom: 24px;">${card.summary}</p>
+                <!-- Render the full marketInfo, which includes the chart -->
+                ${card.marketInfo} 
+            `;
+            exportContainer.appendChild(contentDiv);
+            document.body.appendChild(exportContainer);
+
+            // Use html2canvas to capture our styled container
+            html2canvas(exportContainer, { scale: 2, useCORS: true, allowTaint: true, logging: false }).then(canvas => {
+                document.body.removeChild(exportContainer); // Clean up the temporary element
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                const canvasAspectRatio = canvasWidth / canvasHeight;
+                
+                let finalWidth = pdfWidth - 20; // with some margin
+                let finalHeight = finalWidth / canvasAspectRatio;
+
+                if (finalHeight > pdfHeight - 20) {
+                    finalHeight = pdfHeight - 20;
+                    finalWidth = finalHeight * canvasAspectRatio;
+                }
+                
+                const x = (pdfWidth - finalWidth) / 2;
+                const y = 10;
+
+                pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
+                pdf.save(`${card.front.replace(/ /g, '_')}_export.pdf`);
+            }).catch(err => {
+                console.error("PDF generation failed:", err);
+                if (exportContainer.parentNode) {
+                    document.body.removeChild(exportContainer);
+                }
+            });
+        }
+        
+        function exportCardAsText() {
+            const card = flashcardsData[currentCardIndex];
+            
+            // Strip HTML tags from market info for clean text
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = card.marketInfo;
+            const marketText = tempDiv.textContent || tempDiv.innerText || "";
+
+            // Format chart data as a simple table
+            let chartText = "\n\nMarket Data (in Billions):\n";
+            chartText += "-------------------------\n";
+            card.chartData.forEach(d => {
+                chartText += `${d.year}: $${d.value}\n`;
+            });
+            chartText += "-------------------------\n";
+
+            const textContent = `
+FLASHCARD EXPORT
+=========================
+
+TOPIC: ${card.front}
+
+SUMMARY:
+${card.summary}
+
+MARKET SNAPSHOT:
+${marketText.trim()}
+${chartText}
+            `;
+
+            const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${card.front.replace(/ /g, '_')}_export.txt`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        
+        // --- Event Listeners ---
+        prevBtn.addEventListener('click', () => {
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                updateCardContent();
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentCardIndex < flashcardsData.length - 1) {
+                currentCardIndex++;
+                updateCardContent();
+            }
+        });
+
+        flipBtn.addEventListener('click', () => {
+            flashcardEl.classList.toggle('is-flipped');
+        });
+
+        shuffleBtn.addEventListener('click', shuffleCards);
+        exportPdfBtn.addEventListener('click', exportCardAsPDF);
+        exportTxtBtn.addEventListener('click', exportCardAsText);
+
+
+        // Tab switching logic
+        tabButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent card from flipping if tab is clicked
+                tabButtons.forEach(btn => btn.classList.remove('active-tab'));
+                button.classList.add('active-tab');
+
+                const contentToShow = button.dataset.content;
+                if (contentToShow === 'summary') {
+                    summaryContentEl.classList.remove('hidden');
+                    marketContentEl.classList.add('hidden');
+                } else {
+                    summaryContentEl.classList.add('hidden');
+                    marketContentEl.classList.remove('hidden');
+                }
+            });
+        });
+
+
+        // Feedback Panel Logic
+        feedbackBtn.addEventListener('click', () => {
+            feedbackPanel.classList.remove('translate-y-full');
+        });
+        
+        closeFeedbackBtn.addEventListener('click', () => {
+            feedbackPanel.classList.add('translate-y-full');
+            feedbackThanks.classList.add('opacity-0');
+        });
+
+        feedbackEmojis.forEach(emoji => {
+            emoji.addEventListener('click', () => {
+                feedbackThanks.classList.remove('opacity-0');
+                setTimeout(() => {
+                    feedbackPanel.classList.add('translate-y-full');
+                    feedbackThanks.classList.add('opacity-0');
+                }, 1500);
+            });
+        });
+
+        // --- Initial Load ---
+        updateCardContent();
+    </script>
+
+</body>
+</html>
+
+
