@@ -289,8 +289,8 @@
 
         <script>
         const { jsPDF } = window.jspdf;
-        const apiKey = "AIzaSyBnxyoQ6tXynHpRysmYUF8mAuj5DPXyK4E";
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
+        const apiKey = "";
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=";
         const LOCAL_STORAGE_KEY = 'aiFlashcardsData';
 
         // --- Helper function to create chart HTML ---
@@ -608,7 +608,7 @@
             `;
 
             try {
-                const response = await fetch(API_URL, {
+                const response = await fetch(('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -715,7 +715,7 @@
                     }]
                 };
 
-                const response = await fetch(API_URL, {
+                const response = await fetch(('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
